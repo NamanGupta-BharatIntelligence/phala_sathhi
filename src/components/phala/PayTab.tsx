@@ -1,68 +1,94 @@
-import { MIN } from "@/lib/phala/data";
-import { findTask, inr, pick, when } from "@/lib/phala/utils";
-import type { HistoryEntry, Lang } from "@/lib/phala/types";
+import { taskLabel, taskLook } from "@/lib/phala/catalog";
+import type { ApiPayment } from "@/lib/phala/services";
+import { fill, inr, when } from "@/lib/phala/utils";
+import type { HistoryEntry, Lang, Task } from "@/lib/phala/types";
 import AnimatedRupees from "./AnimatedRupees";
 import Icon from "./Icon";
+
+export type Loadable<T> =
+  | { status: "loading" }
+  | { status: "error" }
+  | { status: "ready"; data: T };
 
 type Props = {
   active: boolean;
   lang: Lang;
   t: (k: string) => string;
-  earned: number;
-  withdrawn: number;
-  history: HistoryEntry[];
+  /** GET /payment */
+  payment: Loadable<ApiPayment>;
+  /** GET /forms + GET /withdrawals merged, newest first. */
+  history: Loadable<HistoryEntry[]>;
+  /** Visible tasks, used to label history rows. */
+  tasks: Task[];
   onWithdraw: () => void;
+  onRetry: () => void;
 };
 
-/** "Earn <b>₹5</b> ..." style strings carry one bold span. */
-function WithBold({ text }: { text: string }) {
-  return (
-    <>
-      {text.split(/(<b>.*?<\/b>)/).map((part, i) =>
-        part.startsWith("<b>") ? <b key={i}>{part.slice(3, -4)}</b> : part,
-      )}
-    </>
-  );
-}
+/** Payment status from the sheet; anything except "pending" allows a new request. */
+export const isPendingStatus = (s: string | undefined) => (s ?? "").trim().toLowerCase() === "pending";
 
-export default function PayTab({ active, lang, t, earned, withdrawn, history, onWithdraw }: Props) {
-  const can = earned - withdrawn;
+export default function PayTab({ active, lang, t, payment, history, tasks, onWithdraw, onRetry }: Props) {
+  const p = payment.status === "ready" ? payment.data : null;
+  const pending = p ? isPendingStatus(p.status) : false;
+  const canWithdraw = !!p && p.amount_withdrawable >= p.min_withdraw && !pending;
 
   return (
     <section className={`tab${active ? " active" : ""}`} id="tab-pay" aria-label={t("pay")}>
-      <div className="hero">
-        <span className="sp" aria-hidden="true">✦</span>
-        <span className="sp" aria-hidden="true">✦</span>
-        <span className="sp" aria-hidden="true">✦</span>
-        <div className="lt">{t("lifetime")}</div>
-        <div className="big"><AnimatedRupees value={earned} /></div>
-        <div className="row"><span>{t("withdrawn")}</span><b>{inr(withdrawn)}</b></div>
-        <div className="row"><span>{t("withdrawable")}</span><b>{inr(can)}</b></div>
-        <button className="wbtn" disabled={can < MIN} onClick={onWithdraw}>
-          {can >= MIN ? t("wBtn") : t("minBtn")}
-        </button>
-      </div>
-      <div className="strip"><Icon name="coin" /><span><WithBold text={t("strip")} /></span></div>
+      {payment.status === "loading" && (
+        <div className="state hero-state" role="status"><span className="spin" />{t("loading")}</div>
+      )}
+      {payment.status === "error" && (
+        <div className="state bad hero-state" role="alert">
+          <span>{t("loadErr")}</span>
+          <button className="btn teal" onClick={onRetry}>{t("retry")}</button>
+        </div>
+      )}
+      {p && (
+        <div className="hero">
+          <span className="sp" aria-hidden="true">✦</span>
+          <span className="sp" aria-hidden="true">✦</span>
+          <span className="sp" aria-hidden="true">✦</span>
+          <div className="lt">{t("balance")}</div>
+          <div className="big"><AnimatedRupees value={p.amount_balance} /></div>
+          <div className="row"><span>{t("withdrawn")}</span><b>{inr(p.amount_withdrawn)}</b></div>
+          <div className="row"><span>{t("withdrawable")}</span><b>{inr(p.amount_withdrawable)}</b></div>
+          <button className="wbtn" disabled={!canWithdraw} onClick={onWithdraw}>
+            {pending ? t("wPendingBtn") : canWithdraw ? t("wBtn") : fill(t("minBtn"), { n: p.min_withdraw })}
+          </button>
+        </div>
+      )}
+      {/* "Earn ₹5 for every form" strip removed: forms are not credited automatically (api_integration.md §2.5). */}
+
       <div className="sec-title">{t("history")}</div>
-      {history.length ? (
-        history.map((h) =>
-          h.type === "work" ? (
-            <div className="hist" key={h.id}>
-              <div className="hi" style={{ background: findTask(h.task).bg, color: findTask(h.task).fg }}>
-                <Icon name={findTask(h.task).ic} />
+      {history.status === "loading" && (
+        <div className="state" role="status"><span className="spin" />{t("loading")}</div>
+      )}
+      {history.status === "error" && (
+        <div className="state bad" role="alert">
+          <span>{t("loadErr")}</span>
+          <button className="btn teal" onClick={onRetry}>{t("retry")}</button>
+        </div>
+      )}
+      {history.status === "ready" && (history.data.length ? (
+        history.data.map((h) => {
+          if (h.type === "work") {
+            const look = taskLook(h.task, tasks);
+            return (
+              <div className="hist" key={`f-${h.id}`}>
+                <div className="hi" style={{ background: look.bg, color: look.fg }}><Icon name={look.ic} /></div>
+                <div className="m">
+                  <h4>{taskLabel(h.task, lang, tasks)}</h4>
+                  <small>{t("formDone")}{h.ts ? ` · ${when(h.ts, lang)}` : ""}</small>
+                </div>
               </div>
-              <div className="m">
-                <h4>{pick(lang, findTask(h.task).title)}</h4>
-                <small>{t("formDone")} · {when(h.ts, lang)}</small>
-              </div>
-              <div className="amt plus">+{inr(h.amt)}</div>
-            </div>
-          ) : (
-            <div className="hist" key={h.id}>
+            );
+          }
+          return (
+            <div className="hist" key={`w-${h.id}`}>
               <div className="hi" style={{ background: "#E0E8FB", color: "#1E3F9A" }}><Icon name="bank" /></div>
               <div className="m">
                 <h4>{t("wdrawal")}</h4>
-                <small>{h.upi} · {when(h.ts, lang)}</small>
+                <small>{h.upi}{h.ts ? ` · ${when(h.ts, lang)}` : ""}</small>
               </div>
               <div>
                 <div className="amt minus">−{inr(h.amt)}</div>
@@ -71,14 +97,13 @@ export default function PayTab({ active, lang, t, earned, withdrawn, history, on
                 </span>
               </div>
             </div>
-          ),
-        )
+          );
+        })
       ) : (
         <div className="empty">
-          <svg viewBox="0 0 40 40" aria-hidden="true"><use href="#feather" /></svg>
-          <br />{t("emptyH")}
+          {t("emptyH")}
         </div>
-      )}
+      ))}
     </section>
   );
 }

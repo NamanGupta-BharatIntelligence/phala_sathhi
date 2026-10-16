@@ -2,11 +2,8 @@ import { TASKS, T } from "./data";
 import type { AppState, Lang, Localized, Task } from "./types";
 
 export const initialState = (): AppState => ({
-  earned: 0,
-  withdrawn: 0,
-  history: [],
-  done: {},
-  upi: "",
+  active: {},
+  detail: null,
   lang: "en",
   tab: "tasks",
   unseen: false,
@@ -19,7 +16,7 @@ export const fill = (s: string, vars: Record<string, string | number>) =>
 
 export const inr = (n: number) => "₹" + Number(n).toLocaleString("en-IN");
 export const when = (ts: number, lang: Lang) =>
-  new Date(ts).toLocaleString(lang === "hi" ? "hi-IN" : "en-IN", {
+  new Date(ts).toLocaleString(lang === "hi" ? "hi-IN" : lang === "mr" ? "mr-IN" : "en-IN", {
     day: "numeric",
     month: "short",
     hour: "numeric",

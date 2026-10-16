@@ -113,7 +113,9 @@ export function useDemo({ cursorRef, reset, setRunning, setCaption, checkField }
 
       for (const [tid, cap] of [["card", "c_accept1"], ["survey", "c_accept2"]]) {
         setCaption(cap);
-        await tap($(`[data-accept="${tid}"]`));
+        await tap($(`[data-detail="${tid}"]`));
+        await sleep(1200);
+        await tap($(`#tab-detail [data-accept="${tid}"]`));
         await sleep(500);
         setCaption("c_fill");
         await fillForm(tid);
@@ -123,7 +125,7 @@ export function useDemo({ cursorRef, reset, setRunning, setCaption, checkField }
       }
 
       setCaption("c_pay");
-      await tap($('[data-nav="pay"]'));
+      await tap($('nav [data-nav="pay"]'));
       await sleep(2200);
       setCaption("c_hist");
       await sleep(2400);
@@ -133,7 +135,7 @@ export function useDemo({ cursorRef, reset, setRunning, setCaption, checkField }
       await sleep(500);
       const upi = $<HTMLInputElement>('#shBody [data-k="upi"]');
       await moveTo(upi);
-      await typeInto(upi, "ravi.sharma@oksbi");
+      await typeInto(upi, "saathi.demo@upi");
       await sleep(300);
       setCaption("c_verify");
       await tap($("#confirmW"));
@@ -144,7 +146,7 @@ export function useDemo({ cursorRef, reset, setRunning, setCaption, checkField }
       await sleep(5200);
 
       setCaption("c_profile");
-      await tap($('[data-nav="profile"]'));
+      await tap($('nav [data-nav="profile"]'));
       await sleep(2400);
       setCaption("c_badges");
       await sleep(2600);
