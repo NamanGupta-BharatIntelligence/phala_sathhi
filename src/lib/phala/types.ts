@@ -4,19 +4,21 @@ export type TabId = "tasks" | "pay" | "profile" | "detail";
 export type IconName =
   | "card" | "shop" | "camera" | "bank" | "doc" | "coin" | "pin" | "clock"
   | "shield" | "award" | "target" | "download" | "check" | "close" | "camAdd"
-  | "back" | "list" | "bag" | "bulb" | "play" | "user";
+  | "back" | "list" | "bag" | "bulb" | "play" | "user" | "refresh" | "mic";
 
 export type Localized = { en: string; hi: string; mr: string };
 
 export type Field = {
   k: string;
-  type: "text" | "tel" | "number" | "select" | "rating" | "yesno" | "photo";
+  type: "text" | "tel" | "number" | "select" | "rating" | "yesno" | "photo" | "audio";
   label: Localized;
   ph?: Localized;
   opts?: Localized[];
   demo: string | number;
   /** Defaults to true. Optional fields may be left empty. */
   required?: boolean;
+  /** Optional field shown without the "(optional)" marker. */
+  quietOptional?: boolean;
   /** Extra validation rules (all optional; applied only when the field has a value). */
   minLength?: number;
   maxLength?: number;

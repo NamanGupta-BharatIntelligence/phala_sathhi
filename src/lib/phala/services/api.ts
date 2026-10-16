@@ -1,10 +1,13 @@
-import { api, session } from "../api/client";
+import { api, session, uploadFile } from "../api/client";
 import type {
   ApiPayment, ApiProfile, ApiSession, ApiSubmission, ApiSubmitResult, ApiTask, ApiWithdrawal, PhalaServices,
 } from "./types";
 
 /** Real backend implementation of the services (endpoints from api_integration.md §2). */
 export const apiServices: PhalaServices = {
+  media: {
+    upload: uploadFile,
+  },
   auth: {
     async signIn(mobile, password) {
       const data = await api<ApiSession>("POST", "/signin", {

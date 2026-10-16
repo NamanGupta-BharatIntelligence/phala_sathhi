@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useRef } from "react";
+import { media } from "@/lib/phala/media";
 import { pick } from "@/lib/phala/utils";
 import type { Field, Lang } from "@/lib/phala/types";
 import Icon from "../Icon";
@@ -11,6 +13,8 @@ export type FieldControlProps = {
   /** `commit` = a tap-style or select change that should be validated right away. */
   onValue: (f: Field, value: string, commit: boolean) => void;
   onBlur: (f: Field, value: string) => void;
+  /** Key for photo/audio files in the on-device media store ("<taskId>:<fieldKey>"). */
+  mediaKey: string;
 };
 
 function TextField({ f, lang, value, onValue, onBlur }: FieldControlProps) {
@@ -78,20 +82,74 @@ function YesNoField({ f, t, value, onValue }: FieldControlProps) {
   );
 }
 
-/** Placeholder only: marks a photo as added. Real capture/upload waits for the backend contract. */
-function PhotoField({ f, t, value, onValue }: FieldControlProps) {
-  const on = value === "1";
+/** Object URL for a stored file, revoked when it changes or the field unmounts. */
+function useFileUrl(key: string, value: string) {
+  const url = useMemo(() => {
+    const file = value === "1" ? media.get(key) : undefined;
+    return file ? URL.createObjectURL(file) : "";
+  }, [key, value]);
+  useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
+  return url;
+}
+
+/** Photo from the camera or gallery. The file stays on this device; the form value is "1" when attached. */
+function PhotoField({ f, t, value, onValue, mediaKey }: FieldControlProps) {
+  const input = useRef<HTMLInputElement>(null);
+  const url = useFileUrl(mediaKey, value);
+  const pickFile = (file?: File) => {
+    if (!file) return;
+    media.set(mediaKey, file);
+    onValue(f, "1", true);
+  };
+  const remove = () => { media.delete(mediaKey); onValue(f, "", true); };
   return (
-    <button
-      type="button"
-      className={`photo${on ? " on" : ""}`}
-      data-k={f.k}
-      data-photo
-      onClick={() => onValue(f, on ? "" : "1", true)}
-    >
-      <Icon name={on ? "check" : "camAdd"} />
-      {t(on ? "photoAdded" : "addPhoto")}
-    </button>
+    <>
+      <input
+        ref={input} type="file" accept="image/*" hidden data-k={f.k} data-photo-input
+        onChange={(e) => { pickFile(e.target.files?.[0]); e.target.value = ""; }}
+      />
+      {url ? (
+        <div className="media-prev">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={url} alt={t("photoAdded")} />
+          <button type="button" className="media-x" onClick={remove}><Icon name="close" />{t("remove")}</button>
+        </div>
+      ) : (
+        <button type="button" className="photo" data-k={f.k} data-photo onClick={() => input.current?.click()}>
+          <Icon name="camAdd" />{t("addPhoto")}
+        </button>
+      )}
+    </>
+  );
+}
+
+/** Audio file picked from the phone (voice note, recording app, WhatsApp audio…). Kept on this device until submit. */
+function AudioField({ f, t, value, onValue, mediaKey }: FieldControlProps) {
+  const input = useRef<HTMLInputElement>(null);
+  const url = useFileUrl(mediaKey, value);
+  const attach = (file?: File) => {
+    if (!file) return;
+    media.set(mediaKey, file);
+    onValue(f, "1", true);
+  };
+  const remove = () => { media.delete(mediaKey); onValue(f, "", true); };
+  return (
+    <>
+      <input
+        ref={input} type="file" accept="audio/*" hidden data-k={f.k} data-audio-input
+        onChange={(e) => { attach(e.target.files?.[0]); e.target.value = ""; }}
+      />
+      {url ? (
+        <div className="media-prev">
+          <audio src={url} controls preload="metadata" aria-label={t("audioAdded")} />
+          <button type="button" className="media-x" onClick={remove}><Icon name="close" />{t("remove")}</button>
+        </div>
+      ) : (
+        <button type="button" className="photo" data-k={f.k} data-audio onClick={() => input.current?.click()}>
+          <Icon name="mic" />{t("upAudio")}
+        </button>
+      )}
+    </>
   );
 }
 
@@ -103,6 +161,7 @@ const CONTROLS: Record<Field["type"], (p: FieldControlProps) => React.ReactNode>
   rating: RatingField,
   yesno: YesNoField,
   photo: PhotoField,
+  audio: AudioField,
 };
 
 /** Renders the right control for a field's type. Add new types here. */

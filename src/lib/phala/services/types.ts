@@ -65,7 +65,13 @@ export interface WalletService {
   withdrawals(): Promise<ApiWithdrawal[]>;
 }
 
+export interface MediaService {
+  /** Stores a file (photo/audio) and returns its storage key and public link. */
+  upload(file: File, kind: "photo" | "audio"): Promise<{ key: string; url: string }>;
+}
+
 export interface PhalaServices {
+  media: MediaService;
   auth: AuthService;
   profile: ProfileService;
   tasks: TaskService;

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mapApiTasks } from "@/lib/phala/catalog";
+import { MAX_UPLOAD_BYTES, media, shrinkPhoto } from "@/lib/phala/media";
 import {
   ApiError, services, setUnauthenticatedHandler,
   type ApiPayment, type ApiProfile, type ApiSubmission, type ApiWithdrawal,
@@ -141,12 +142,15 @@ export default function PhalaApp() {
   };
 
   /* ---------- loaders (failed refreshes keep the last good data) ---------- */
-  const loadTasks = useCallback(async () => {
-    setList({ status: "loading" });
+  /** `quiet` keeps the current list on screen (used by the header refresh button). */
+  const loadTasks = useCallback(async (quiet = false) => {
+    if (!quiet) setList({ status: "loading" });
     try {
       setList({ status: "ready", tasks: mapApiTasks(await services.tasks.list()) });
+      return true;
     } catch {
-      setList({ status: "error" });
+      setList((p) => (quiet && p.status === "ready" ? p : { status: "error" }));
+      return false;
     }
   }, []);
 
@@ -154,20 +158,23 @@ export default function PhalaApp() {
     try {
       const data = await services.tasks.submissions();
       setForms({ status: "ready", data: Array.isArray(data) ? data : [] });
+      return true;
     } catch {
       setForms((p) => (p.status === "ready" ? p : { status: "error" }));
+      return false;
     }
   }, []);
 
   const loadWallet = useCallback(async () => {
-    await Promise.all([
+    const results = await Promise.all([
       services.wallet.payment()
-        .then((data) => setPayment({ status: "ready", data }))
-        .catch(() => setPayment((p) => (p.status === "ready" ? p : { status: "error" }))),
+        .then((data) => { setPayment({ status: "ready", data }); return true; })
+        .catch(() => { setPayment((p) => (p.status === "ready" ? p : { status: "error" })); return false; }),
       services.wallet.withdrawals()
-        .then((data) => setWds({ status: "ready", data: Array.isArray(data) ? data : [] }))
-        .catch(() => setWds((p) => (p.status === "ready" ? p : { status: "error" }))),
+        .then((data) => { setWds({ status: "ready", data: Array.isArray(data) ? data : [] }); return true; })
+        .catch(() => { setWds((p) => (p.status === "ready" ? p : { status: "error" })); return false; }),
     ]);
+    return results.every(Boolean);
   }, []);
 
   const applyProfile = useCallback((p: ApiProfile) => {
@@ -179,8 +186,27 @@ export default function PhalaApp() {
   const loadProfile = useCallback(async () => {
     try {
       applyProfile(await services.profile.get());
-    } catch { /* profile stays empty; UNAUTHENTICATED is handled globally */ }
+      return true;
+    } catch {
+      return false; // profile stays as is; UNAUTHENTICATED is handled globally
+    }
   }, [applyProfile]);
+
+  /* ---------- header refresh: reload everything from the API ---------- */
+  const [refreshing, setRefreshing] = useState(false);
+  const refreshAll = async () => {
+    if (refreshing) return;
+    setRefreshing(true);
+    // screens that failed earlier show their loader again; working screens keep their data
+    if (list.status === "error") setList({ status: "loading" });
+    if (forms.status === "error") setForms({ status: "loading" });
+    if (payment.status === "error") setPayment({ status: "loading" });
+    if (wds.status === "error") setWds({ status: "loading" });
+    const ok = await Promise.all([loadProfile(), loadTasks(true), loadForms(), loadWallet()]);
+    setRefreshing(false);
+    if (!latest.current.profile && !services.auth.hasSession()) return; // signed out meanwhile
+    toast(ok.every(Boolean) ? t("refreshed") : !navigator.onLine ? t("offline") : t("loadErr"));
+  };
 
   const retryPay = () => {
     if (payment.status === "error") setPayment({ status: "loading" });
@@ -262,6 +288,7 @@ export default function PhalaApp() {
   /** Clears all account data from memory and shows sign-in. */
   const signOutLocal = useCallback((expired: boolean) => {
     closeNow();
+    media.clearAll();
     setProfile(null);
     setList({ status: "loading" });
     setForms({ status: "loading" });
@@ -317,7 +344,12 @@ export default function PhalaApp() {
     }
     setSubmitMsg("");
     setSheet({ kind: "form", taskId });
-    form.load(existing?.draft ?? {});
+    // Photo/audio files live in memory only; drop "attached" flags whose file is gone (e.g. after a reload).
+    const draft = { ...(existing?.draft ?? {}) };
+    for (const f of tk.fields) {
+      if ((f.type === "photo" || f.type === "audio") && !media.has(`${taskId}:${f.k}`)) draft[f.k] = "";
+    }
+    form.load(draft);
     openSheet();
   };
 
@@ -335,7 +367,24 @@ export default function PhalaApp() {
     setSubmitMsg("");
     form.setPhase("submitting");
     try {
-      await services.tasks.submit(formTask.apiName, { ...values });
+      // 1) Upload attached photo/audio (POST /api/upload → Supabase) and send their links instead of "1".
+      const response: Record<string, string> = { ...values };
+      for (const f of formTask.fields) {
+        if ((f.type !== "photo" && f.type !== "audio") || values[f.k] !== "1") continue;
+        const key = `${formTask.id}:${f.k}`;
+        const file = media.get(key);
+        if (!file) { response[f.k] = ""; continue; }
+        let url = media.uploadedUrl(key);
+        if (!url) {
+          const body = f.type === "photo" ? await shrinkPhoto(file) : file;
+          if (body.size > MAX_UPLOAD_BYTES) throw new ApiError("FILE_TOO_LARGE", "File too large", 413);
+          url = (await services.media.upload(body, f.type)).url;
+          media.markUploaded(key, url);
+        }
+        response[f.k] = url;
+      }
+      // 2) POST /form with the answers and file links.
+      await services.tasks.submit(formTask.apiName, response);
     } catch (e) {
       const code = codeOf(e);
       if (code === "UNAUTHENTICATED") return; // signed out by the global handler
@@ -356,11 +405,18 @@ export default function PhalaApp() {
       }
       saveDraft(); // keep the answers so the Saathi can retry
       form.setPhase("error");
-      setSubmitMsg(code === "NETWORK" ? t("submitOffline") : t("submitErr"));
+      setSubmitMsg(
+        code === "NETWORK" ? t("submitOffline")
+        : code === "FILE_TOO_LARGE" ? t("fileTooBig")
+        : code === "BAD_FILE_TYPE" ? t("fileBadType")
+        : code === "STORAGE_ERROR" || code === "STORAGE_NOT_CONFIGURED" ? t("uploadErr")
+        : t("submitErr"),
+      );
       return;
     }
     form.setPhase("idle");
     const id = formTask.id;
+    media.clearTask(id);
     setS((p) => ({
       ...p,
       active: Object.fromEntries(Object.entries(p.active).filter(([k]) => k !== id)),
@@ -535,6 +591,16 @@ export default function PhalaApp() {
             <div><b>Phala Sathhi</b><small>फला साथी</small></div>
           </div>
           <button
+            className={`rbtn${refreshing ? " busy" : ""}`}
+            aria-label={t("refresh")}
+            title={t("refresh")}
+            aria-busy={refreshing}
+            disabled={refreshing}
+            onClick={refreshAll}
+          >
+            <Icon name="refresh" />
+          </button>
+          <button
             className={`pbtn${s.tab === "profile" ? " on" : ""}`}
             data-nav="profile"
             aria-label={t("profile")}
@@ -548,7 +614,7 @@ export default function PhalaApp() {
         <main id="main">
           <TasksTab
             active={s.tab === "tasks"} lang={lang} t={t} earned={pay?.amount_balance ?? 0} done={done} hour={hour}
-            list={list} onRetry={loadTasks}
+            list={list} onRetry={() => loadTasks()}
             activeTasks={Object.fromEntries(Object.entries(s.active).filter(([id]) => taskById(id)))}
             filledFor={filledFor}
             showInstall={showInstall} canInstall={installEvt !== null}

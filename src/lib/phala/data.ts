@@ -1,4 +1,4 @@
-import type { IconName, Lang, Task, TaskInfo } from "./types";
+import type { Field, IconName, Lang, Task, TaskInfo } from "./types";
 
 export const FEE = 5;
 export const MIN = 10;
@@ -26,7 +26,9 @@ export const ICONS: Record<IconName, string> = {
   bag:'<path d="M5 8h14l-1 12H6z"/><path d="M9 8V6a3 3 0 016 0v2"/>',
   bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 00-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0012 3z"/>',
   play:'<path d="M8 5l11 7-11 7z"/>',
-  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4-6 8-6s7 1.5 8 6"/>'
+  user:'<circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4-6 8-6s7 1.5 8 6"/>',
+  mic:'<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/>',
+  refresh:'<path d="M20 11a8 8 0 00-14.6-4.5L4 8"/><path d="M4 3v5h5"/><path d="M4 13a8 8 0 0014.6 4.5L20 16"/><path d="M20 21v-5h-5"/>'
 };
 
 export const T: Record<Lang, Record<string, string>> = {
@@ -91,7 +93,7 @@ export const T: Record<Lang, Record<string, string>> = {
     wNote:'Paid after approval. Until then it shows as Processing.', wRequested:'Withdrawal requested', wRequestedSub:'₹{n} to {u} is pending approval.',
     wInsufficient:'Amount is more than your withdrawable balance.', wPendingExists:'You already have a withdrawal pending.',
     loadErr:'Couldn’t load. Please try again.', loading:'Loading…', l_expired:'Please log in again.', l_bad:'Check your mobile number and password.',
-    submitOffline:'You are offline. Your answers are saved; submit again when connected.',
+    submitOffline:'You are offline. Your answers are saved; submit again when connected.', refresh:'Refresh', refreshed:'Updated', upAudio:'Upload audio', remove:'Remove', audioAdded:'Audio added', uploadErr:'Couldn’t upload the photo/audio. Your answers are saved. Please try again.', fileTooBig:'The photo/audio is too large (max 4 MB). Remove it or record a shorter one.', fileBadType:'This file type isn’t supported. Choose a photo or an audio file.',
     wdErr:'Couldn’t record the withdrawal. Please try again.'
   },
   hi:{
@@ -155,7 +157,7 @@ export const T: Record<Lang, Record<string, string>> = {
     wNote:'मंज़ूरी के बाद भुगतान होगा। तब तक यह "प्रक्रिया में" दिखेगा।', wRequested:'निकासी का अनुरोध भेजा गया', wRequestedSub:'{u} पर ₹{n} मंज़ूरी के लिए लंबित है।',
     wInsufficient:'राशि आपकी निकालने योग्य राशि से अधिक है।', wPendingExists:'आपकी एक निकासी पहले से प्रक्रिया में है।',
     loadErr:'लोड नहीं हो सका। फिर कोशिश करें।', loading:'लोड हो रहा है…', l_expired:'कृपया फिर से लॉग इन करें।', l_bad:'मोबाइल नंबर और पासवर्ड जाँचें।',
-    submitOffline:'आप ऑफ़लाइन हैं। आपके जवाब सहेजे गए हैं; इंटरनेट मिलने पर फिर जमा करें।',
+    submitOffline:'आप ऑफ़लाइन हैं। आपके जवाब सहेजे गए हैं; इंटरनेट मिलने पर फिर जमा करें।', refresh:'रीफ़्रेश करें', refreshed:'अपडेट हो गया', upAudio:'ऑडियो अपलोड करें', remove:'हटाएँ', audioAdded:'ऑडियो जुड़ गया', uploadErr:'फ़ोटो/ऑडियो अपलोड नहीं हो सका। आपके जवाब सहेजे गए हैं। फिर कोशिश करें।', fileTooBig:'फ़ोटो/ऑडियो बहुत बड़ा है (अधिकतम 4 MB)। इसे हटाएँ या छोटा रिकॉर्ड करें।', fileBadType:'यह फ़ाइल प्रकार समर्थित नहीं है। फ़ोटो या ऑडियो फ़ाइल चुनें।',
     wdErr:'निकासी दर्ज नहीं हो सकी। फिर कोशिश करें।'
   },
   mr:{
@@ -219,10 +221,21 @@ export const T: Record<Lang, Record<string, string>> = {
     wNote:'मंजुरीनंतर पैसे दिले जातील. तोपर्यंत "प्रक्रियेत" दिसेल.', wRequested:'पैसे काढण्याची विनंती पाठवली', wRequestedSub:'{u} वर ₹{n} मंजुरीसाठी प्रलंबित आहे.',
     wInsufficient:'रक्कम काढता येणाऱ्या रकमेपेक्षा जास्त आहे.', wPendingExists:'तुमचे एक पैसे काढणे आधीच प्रक्रियेत आहे.',
     loadErr:'लोड होऊ शकले नाही. पुन्हा प्रयत्न करा.', loading:'लोड होत आहे…', l_expired:'कृपया पुन्हा लॉग इन करा.', l_bad:'मोबाइल नंबर आणि पासवर्ड तपासा.',
-    submitOffline:'तुम्ही ऑफलाइन आहात. तुमची उत्तरे जतन आहेत; इंटरनेट मिळाल्यावर पुन्हा सबमिट करा.',
+    submitOffline:'तुम्ही ऑफलाइन आहात. तुमची उत्तरे जतन आहेत; इंटरनेट मिळाल्यावर पुन्हा सबमिट करा.', refresh:'रिफ्रेश करा', refreshed:'अपडेट झाले', upAudio:'ऑडिओ अपलोड करा', remove:'काढा', audioAdded:'ऑडिओ जोडला', uploadErr:'फोटो/ऑडिओ अपलोड होऊ शकला नाही. तुमची उत्तरे जतन आहेत. पुन्हा प्रयत्न करा.', fileTooBig:'फोटो/ऑडिओ खूप मोठा आहे (कमाल 4 MB). तो काढा किंवा लहान रेकॉर्ड करा.', fileBadType:'हा फाइल प्रकार समर्थित नाही. फोटो किंवा ऑडिओ फाइल निवडा.',
     wdErr:'पैसे काढणे नोंदवता आले नाही. पुन्हा प्रयत्न करा.'
   }
 };
+
+/**
+ * The one form every task uses. Audio and photo are optional, but not marked "(optional)".
+ * (The task-specific `fields` in TASKS below are kept for reference but no longer used.)
+ */
+export const GENERIC_FIELDS: Field[] = [
+  {k:'name',type:'text',label:{en:'Name',hi:'नाम',mr:'नाव'},ph:{en:'Full name',hi:'पूरा नाम',mr:'पूर्ण नाव'},demo:'Test Name'},
+  {k:'phone',type:'tel',label:{en:'Phone number',hi:'फ़ोन नंबर',mr:'फोन नंबर'},ph:{en:'10-digit number',hi:'10 अंकों का नंबर',mr:'10 अंकी नंबर'},demo:'9000000000'},
+  {k:'audio',type:'audio',label:{en:'Audio',hi:'ऑडियो',mr:'ऑडिओ'},demo:'',required:false,quietOptional:true},
+  {k:'photo',type:'photo',label:{en:'Photo',hi:'फ़ोटो',mr:'फोटो'},demo:'',required:false,quietOptional:true},
+];
 
 export const TASKS: Task[] = [
   { id:'card', ic:'card', bg:'#E5F6F4', fg:'#0A6A73',

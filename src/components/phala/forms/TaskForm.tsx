@@ -32,9 +32,12 @@ export default function TaskForm({ task, lang, t, values, status, shaking, onVal
           >
             <label className="lbl" id={`l_${f.k}`} htmlFor={hasLabelTarget(f) ? `f_${f.k}` : undefined}>
               {pick(lang, f.label)}
-              {!isRequired(f) && <span className="opt"> ({t("optional")})</span>}
+              {!isRequired(f) && !f.quietOptional && <span className="opt"> ({t("optional")})</span>}
             </label>
-            <FieldControl f={f} lang={lang} t={t} value={values[f.k] ?? ""} onValue={onValue} onBlur={onBlur} />
+            <FieldControl
+              f={f} lang={lang} t={t} value={values[f.k] ?? ""} onValue={onValue} onBlur={onBlur}
+              mediaKey={`${task.id}:${f.k}`}
+            />
             <div className="err" role="alert">{st?.err}</div>
           </div>
         );

@@ -1,4 +1,4 @@
-import { TASKS } from "./data";
+import { GENERIC_FIELDS, TASKS } from "./data";
 import type { ApiTask } from "./services/types";
 import type { Lang, Task } from "./types";
 import { pick } from "./utils";
@@ -12,7 +12,7 @@ const norm = (s: string) => s.trim().replace(/\s+/g, " ").toLowerCase();
 
 const LOCAL_BY_NAME = new Map(TASKS.map((t) => [norm(t.title.en), t] as const));
 
-/** Builds the visible task list from the API rows. Unknown tasks are shown without a form. */
+/** Builds the visible task list from the API rows. Unknown tasks get the same form and a neutral look. */
 export function mapApiTasks(rows: ApiTask[]): Task[] {
   const seen = new Set<string>();
   const out: Task[] = [];
@@ -22,8 +22,9 @@ export function mapApiTasks(rows: ApiTask[]): Task[] {
     seen.add(name);
     const local = LOCAL_BY_NAME.get(norm(name));
     const extra = { apiName: name, apiShort: r.short_description || "", apiFull: r.full_description || "" };
+    // Every task uses the same form (name, phone, audio, photo).
     if (local) {
-      out.push({ ...local, ...extra });
+      out.push({ ...local, ...extra, fields: GENERIC_FIELDS });
     } else {
       out.push({
         id: `api:${name}`,
@@ -33,7 +34,7 @@ export function mapApiTasks(rows: ApiTask[]): Task[] {
         title: { en: name, hi: name, mr: name },
         desc: { en: extra.apiShort, hi: extra.apiShort, mr: extra.apiShort },
         meta: { en: "", hi: "", mr: "" },
-        fields: [], // no form definition in the frontend for this task yet
+        fields: GENERIC_FIELDS,
         ...extra,
       });
     }

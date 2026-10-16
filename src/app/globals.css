@@ -58,6 +58,15 @@ header::after{content:"";position:absolute;left:0;right:0;bottom:-9px;height:10p
 .pbtn:active{transform:scale(.94)}
 .pbtn.on{box-shadow:0 0 0 3px var(--cream)}
 .pbtn .ic{width:22px;height:22px;stroke-width:2}
+/* refresh button (header) */
+.rbtn{
+  width:34px;height:34px;border-radius:50%;flex:none;display:grid;place-items:center;
+  background:rgba(255,255,255,.14);border:1px solid rgba(246,215,123,.5);color:var(--cream);transition:transform .1s,background .2s;
+}
+.rbtn .ic{width:18px;height:18px;stroke-width:2}
+.rbtn:active{transform:scale(.92)}
+.rbtn:disabled{cursor:wait;opacity:.85}
+.rbtn.busy .ic{animation:rot .8s linear infinite}
 @media (min-width:390px){.hbtn .rl{display:inline}}
 
 #net{display:none;flex:none;position:sticky;top:64px;z-index:14;background:var(--amber);color:#fff;text-align:center;font-size:12.5px;font-weight:600;padding:6px var(--s3);margin-top:9px}
@@ -332,6 +341,11 @@ nav .dot{position:absolute;top:7px;left:calc(50% + 6px);width:11px;height:11px;b
 .yn button.on{background:var(--teal-700);color:#fff;border-color:var(--teal-700)}
 .photo{width:100%;min-height:78px;border-radius:14px;border:2px dashed var(--teal-500);background:#fff;color:var(--teal-700);font-weight:600;font-size:14px;display:flex;align-items:center;justify-content:center;gap:var(--s2)}
 .photo.on{border-style:solid;background:#E5F6F4;color:var(--green);border-color:var(--green)}
+.media-prev{display:flex;flex-direction:column;gap:var(--s2);border:2px solid var(--green);border-radius:14px;padding:var(--s2);background:#F4FBFA}
+.media-prev img{width:100%;max-height:220px;object-fit:cover;border-radius:10px;display:block}
+.media-prev audio{width:100%}
+.media-x{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:40px;padding:0 12px;border-radius:10px;border:1px solid #E3E8EA;background:#fff;color:var(--red);font-weight:600;font-size:13px}
+.media-x svg{width:16px;height:16px}
 .amtbox{text-align:center;font-size:44px;font-weight:700;color:var(--blue);margin:2px 0 14px;line-height:1.2}
 .amtbox small{display:block;font-size:12px;color:var(--muted);font-weight:500}
 .vfy{min-height:0;margin:-6px 0 var(--s3);font-size:13.5px;font-weight:600;display:flex;align-items:center;gap:var(--s2)}
